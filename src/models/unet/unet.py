@@ -46,7 +46,7 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.layers = nn.ModuleList()
-        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
         in_ch = in_channels
         for feature in features:
@@ -59,7 +59,7 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
             skip_connections.append(x)
-            x = self.max_pool(x)
+            x = self.pool(x)
 
         return x, skip_connections
 

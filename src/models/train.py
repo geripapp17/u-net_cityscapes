@@ -54,7 +54,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     epochs: int,
     device: torch.device,
-    writer: torch.utils.tensorboard.writer.SummaryWriter = None,
+    writer=None,
 ) -> None:
 
     for epoch in tqdm(range(epochs)):
