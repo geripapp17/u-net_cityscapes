@@ -1,8 +1,8 @@
-from torch.utils.data import DataLoader
-from typing import Tuple, List
+from typing import Tuple
 from pathlib import Path
+from torch.utils.data import DataLoader
 
-from .dataset import DATASET_NAME, CITYSCAPES
+from src.data.dataset import DATASET_NAME, SPLIT_TYPE, CITYSCAPES
 
 
 def get_dataloaders(
@@ -16,14 +16,14 @@ def get_dataloaders(
 
     if dataset == DATASET_NAME.CITYSCAPES:
         train_dataset = CITYSCAPES(
-            input_root=root / "leftImg8bit/train",
-            target_root=root / "gtFine/train",
+            root=root,
+            split=SPLIT_TYPE.TRAIN,
             transform=transform_train,
         )
 
         test_dataset = CITYSCAPES(
-            input_root=root / "leftImg8bit/test",
-            target_root=root / "gtFine/test",
+            root=root,
+            split=SPLIT_TYPE.TEST,
             transform=transform_test,
         )
 
@@ -42,3 +42,14 @@ def get_dataloaders(
     )
 
     return train_dataloader, test_dataloader
+
+
+if __name__ == "__main__":
+    train_dataloader, test_dataloader = get_dataloaders(
+        dataset=DATASET_NAME.CITYSCAPES,
+        root=Path("/home/geri/projects/machine_learning/datasets/cityscapes"),
+        batch_size=16,
+        num_workers=1,
+        transform_train=None,
+        transform_test=None,
+    )

@@ -1,12 +1,12 @@
+from pathlib import Path
+from typing import Tuple
+import glob
+from enum import Enum
+
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
-from enum import Enum
-import glob
 import numpy as np
-
-from pathlib import Path
-from typing import Tuple, List
 
 
 class DATASET_NAME(Enum):
@@ -14,9 +14,9 @@ class DATASET_NAME(Enum):
 
 
 class SPLIT_TYPE(Enum):
-    TRAIN: "train"
-    VAL: "val"
-    TEST: "test"
+    TRAIN = "train"
+    VAL = "val"
+    TEST = "test"
 
 
 class CITYSCAPES(Dataset):
@@ -82,15 +82,16 @@ class CITYSCAPES(Dataset):
         input_paths = sorted(glob.glob(f"{root / 'leftImg8bit' / split.value}/*/*.png"))
         target_paths = sorted(glob.glob(f"{root / 'gtFine' / split.value}/*/*labelIds.png"))
 
-        self.data = [(input_paths[i], target_paths[i]) for i in range(len(input))]
+        self.data = [(input_paths[i], target_paths[i]) for i in range(len(input_paths))]
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        img = Image.open(fp=self.data[idx][0])
-        target = Image.open(fp=self.data[idx][1])
+        img = np.array(Image.open(fp=self.data[idx][0]))
+        target = np.array(Image.open(fp=self.data[idx][1]))
 
         if self.transform is not None:
-            img, target = self.transform(img, target)
+            transformed = self.transform(image=img, mask=target)
+            img, target = transformed["image"], transformed["mask"]
 
         return img, self._encode_target(target)
 
