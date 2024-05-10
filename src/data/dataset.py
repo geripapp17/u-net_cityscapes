@@ -87,13 +87,13 @@ class CITYSCAPES(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
 
         img = np.array(Image.open(fp=self.data[idx][0]))
-        target = np.array(Image.open(fp=self.data[idx][1]))
+        target = self._encode_target(np.array(Image.open(fp=self.data[idx][1])))
 
         if self.transform is not None:
             transformed = self.transform(image=img, mask=target)
             img, target = transformed["image"], transformed["mask"]
 
-        return img, self._encode_target(target)
+        return img, target
 
     def __len__(self) -> int:
         return len(self.data)

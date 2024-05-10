@@ -2,6 +2,13 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
+import torch.nn.functional as F
+
+import io
+
+# import matplotlib.pyplot as plt
+from PIL import Image
+
 
 def train_step(
     model: nn.Module,
@@ -15,7 +22,12 @@ def train_step(
     for xs, ys in dataloader:
         xs, ys = xs.to(device), ys.to(device)
 
+        # with torch.cuda.amp.autocast():
         preds = model(xs)
+
+        preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
+        ys = ys.view(-1)
+
         loss = loss_fn(preds, ys)
         train_loss += loss.item()
 
@@ -40,6 +52,9 @@ def test_step(
             xs, ys = xs.to(device), ys.to(device)
 
             preds = model(xs)
+            preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
+            ys = ys.view(-1)
+
             loss = loss_fn(preds, ys)
             test_loss += loss.item()
 
@@ -56,6 +71,9 @@ def train(
     device: torch.device,
     writer=None,
 ) -> None:
+
+    visualize_x, visualize_y = next(iter(test_dataloader))
+    visualize_x, visualize_y = visualize_x[0].to(device), visualize_y[0]
 
     for epoch in tqdm(range(epochs)):
 
@@ -83,7 +101,30 @@ def train(
                 global_step=epoch,
             )
 
-            writer.add_graph(model=model, input_to_model=torch.randn(1, 3, 512, 512).to(device))
+            # model.eval()
+            # with torch.inference_mode():
+            #     visualize_pred = model(visualize_x)
+
+            # fig = plt.figure(figsize=(20, 30))
+            # fig.add_subplot(1, 2, 1)
+            # plt.imshow(visualize_pred.numpy().cpu().permute(1, 2, 0))
+            # plt.axis(False)
+
+            # fig.add_subplot(1, 2, 2)
+            # plt.imshow(visualize_y.numpy().permute(1, 2, 0))
+            # plt.axis(False)
+
+            # buf = io.BytesIO()
+            # plt.savefig(buf, format="png")
+            # buf.seek(0)
+
+            # writer.add_image(
+            #     tag="Prediction-Target",
+            #     img_tensor=pil_to_tensor(Image.open(io.BytesIO(buf))),
+            #     global_step=epoch,
+            # )
+
+            # writer.add_graph(model=model, input_to_model=torch.randn(1, 3, 512, 512).to(device))
 
     if writer:
         writer.close()

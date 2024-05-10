@@ -23,7 +23,7 @@ def get_dataloaders(
 
         test_dataset = CITYSCAPES(
             root=root,
-            split=SPLIT_TYPE.TEST,
+            split=SPLIT_TYPE.VAL,
             transform=transform_test,
         )
 
@@ -41,10 +41,11 @@ def get_dataloaders(
         shuffle=False,
     )
 
-    return train_dataloader, test_dataloader
+    return train_dataloader, test_dataloader, len(train_dataset.CLASS_NAMES)
 
 
 if __name__ == "__main__":
+
     train_dataloader, test_dataloader = get_dataloaders(
         dataset=DATASET_NAME.CITYSCAPES,
         root=Path("/home/geri/projects/machine_learning/datasets/cityscapes"),
