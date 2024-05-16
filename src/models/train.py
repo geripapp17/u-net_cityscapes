@@ -2,7 +2,8 @@ import torch
 from torch import nn
 from tqdm import tqdm
 
-import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from torchvision.transforms.functional import pil_to_tensor
 
 import io
 
@@ -70,10 +71,11 @@ def train(
     epochs: int,
     device: torch.device,
     writer=None,
+    model_saver=None,
 ) -> None:
 
     visualize_x, visualize_y = next(iter(test_dataloader))
-    visualize_x, visualize_y = visualize_x[0].to(device), visualize_y[0]
+    visualize_x = visualize_x.to(device)
 
     for epoch in tqdm(range(epochs)):
 
@@ -101,30 +103,42 @@ def train(
                 global_step=epoch,
             )
 
-            # model.eval()
-            # with torch.inference_mode():
-            #     visualize_pred = model(visualize_x)
+            model.eval()
+            with torch.inference_mode():
+                visualize_pred = model(visualize_x)
 
-            # fig = plt.figure(figsize=(20, 30))
-            # fig.add_subplot(1, 2, 1)
-            # plt.imshow(visualize_pred.numpy().cpu().permute(1, 2, 0))
-            # plt.axis(False)
+            fig, axes = plt.subplots(1, 2)
+            visualize_pred, _ = torch.max(visualize_pred[0], dim=0, keepdim=True)
+            axes[0].imshow(visualize_pred.permute(1, 2, 0).cpu().numpy())
+            axes[0].axis(False)
 
-            # fig.add_subplot(1, 2, 2)
-            # plt.imshow(visualize_y.numpy().permute(1, 2, 0))
-            # plt.axis(False)
+            axes[1].imshow(visualize_y[0].numpy())
+            axes[1].axis(False)
 
-            # buf = io.BytesIO()
-            # plt.savefig(buf, format="png")
-            # buf.seek(0)
+            plt.tight_layout()
 
-            # writer.add_image(
-            #     tag="Prediction-Target",
-            #     img_tensor=pil_to_tensor(Image.open(io.BytesIO(buf))),
-            #     global_step=epoch,
-            # )
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png")
+            buf.seek(0)
+
+            writer.add_image(
+                tag="Prediction-Target",
+                img_tensor=pil_to_tensor(Image.open(io.BytesIO(buf.getvalue()))),
+                global_step=epoch,
+            )
+
+            plt.close()
 
             # writer.add_graph(model=model, input_to_model=torch.randn(1, 3, 512, 512).to(device))
+
+        if model_saver is not None:
+            model_saver(
+                current_loss=test_loss,
+                epoch=epoch,
+                model=model,
+                optim=optimizer,
+                loss_fn=loss_fn,
+            )
 
     if writer:
         writer.close()
