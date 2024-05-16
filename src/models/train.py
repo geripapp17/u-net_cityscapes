@@ -23,8 +23,7 @@ def train_step(
         for xs, ys in dataloader:
             xs, ys = xs.to(device), ys.to(device)
 
-            use_amp = scaler is not None
-            with torch.cuda.amp.autocast(enabled=use_amp, dtype=torch.float16):
+            with torch.autocast(device_type=device, enabled=scaler.is_enabled(), dtype=torch.float16):
                 preds = model(xs)
 
                 preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
@@ -36,7 +35,6 @@ def train_step(
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-
             optimizer.zero_grad(set_to_none=True)
 
             pbar.update(1)
@@ -49,6 +47,7 @@ def test_step(
     dataloader: torch.utils.data.DataLoader,
     loss_fn: nn.Module,
     device: torch.device,
+    use_amp: bool = True,
 ) -> float:
 
     model.eval()
@@ -58,11 +57,13 @@ def test_step(
             for xs, ys in dataloader:
                 xs, ys = xs.to(device), ys.to(device)
 
-                preds = model(xs)
-                preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
-                ys = ys.view(-1)
+                with torch.autocast(device_type=device, enabled=use_amp, dtype=torch.float16):
+                    preds = model(xs)
 
-                loss = loss_fn(preds, ys)
+                    preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
+                    ys = ys.view(-1)
+                    loss = loss_fn(preds, ys)
+
                 test_loss += loss.item()
 
                 pbar.update(1)
@@ -106,6 +107,7 @@ def train(
                 dataloader=test_dataloader,
                 loss_fn=loss_fn,
                 device=device,
+                use_amp=scaler.is_enabled(),
             )
 
             if writer:
@@ -118,7 +120,7 @@ def train(
 
                 writer.add_image(
                     tag="Prediction-Target",
-                    img_tensor=get_image_for_tensorboard(model, x_vis, y_vis),
+                    img_tensor=get_image_for_tensorboard(model, x_vis, y_vis[0]),
                     global_step=epoch,
                 )
 
@@ -152,7 +154,7 @@ def get_image_for_tensorboard(model, x, y):
     axes[0].imshow(visualize_pred.permute(1, 2, 0).cpu().numpy())
     axes[0].axis(False)
 
-    axes[1].imshow(y[0].numpy())
+    axes[1].imshow(y.numpy())
     axes[1].axis(False)
 
     plt.tight_layout()
