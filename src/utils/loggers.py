@@ -40,6 +40,7 @@ class ModelSaver:
         model: nn.Module,
         optim: torch.optim.Optimizer,
         loss_fn: nn.Module,
+        scaler: torch.cuda.amp.GradScaler,
     ) -> None:
 
         old_files = os.listdir(self.path)
@@ -53,6 +54,7 @@ class ModelSaver:
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optim.state_dict(),
                 "loss": loss_fn,
+                "scaler": scaler.state_dict(),
             },
             f=latest_path,
         )
@@ -65,9 +67,15 @@ class ModelSaver:
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optim.state_dict(),
                     "loss": loss_fn,
+                    "scaler": scaler.state_dict(),
                 },
                 f=best_path,
             )
+
+            for old_file in old_files:
+                if "best" in old_files:
+                    old_files.remove(old_file)
+                    os.remove(path=self.path / old_file)
 
         for old_file in old_files:
             os.remove(path=self.path / old_file)
