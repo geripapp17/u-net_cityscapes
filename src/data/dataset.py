@@ -93,7 +93,7 @@ class CITYSCAPES(Dataset):
             transformed = self.transform(image=img, mask=target)
             img, target = transformed["image"], transformed["mask"]
 
-        return img, target
+        return img, target.long()
 
     def __len__(self) -> int:
         return len(self.data)

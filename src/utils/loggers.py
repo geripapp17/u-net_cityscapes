@@ -78,4 +78,5 @@ class ModelSaver:
                     os.remove(path=self.path / old_file)
 
         for old_file in old_files:
-            os.remove(path=self.path / old_file)
+            if "latest" in old_files:
+                os.remove(path=self.path / old_file)

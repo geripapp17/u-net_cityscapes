@@ -25,9 +25,6 @@ def train_step(
 
             with torch.autocast(device_type=device, enabled=scaler.is_enabled(), dtype=torch.float16):
                 preds = model(xs)
-
-                preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
-                ys = ys.view(-1)
                 loss = loss_fn(preds, ys)
 
             train_loss += loss.item()
@@ -59,9 +56,6 @@ def test_step(
 
                 with torch.autocast(device_type=device, enabled=use_amp, dtype=torch.float16):
                     preds = model(xs)
-
-                    preds = preds.transpose(1, 2).transpose(2, 3).contiguous().view(-1, preds.shape[1])
-                    ys = ys.view(-1)
                     loss = loss_fn(preds, ys)
 
                 test_loss += loss.item()
@@ -147,11 +141,11 @@ def get_image_for_tensorboard(model, x, y):
 
     model.eval()
     with torch.inference_mode():
-        visualize_pred = model(x)
+        preds = model(x)
 
     fig, axes = plt.subplots(1, 2, figsize=(20, 5))
-    visualize_pred, _ = torch.max(visualize_pred[0], dim=0, keepdim=True)
-    axes[0].imshow(visualize_pred.permute(1, 2, 0).cpu().numpy())
+    pred = torch.argmax(preds[0, :, :, :], dim=0)
+    axes[0].imshow(pred.cpu().numpy())
     axes[0].axis(False)
 
     axes[1].imshow(y.numpy())
