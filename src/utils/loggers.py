@@ -72,11 +72,8 @@ class ModelSaver:
                 f=best_path,
             )
 
-            for old_file in old_files:
-                if "best" in old_files:
-                    old_files.remove(old_file)
-                    os.remove(path=self.path / old_file)
-
-        for old_file in old_files:
-            if "latest" in old_files:
+            for old_file in [n for n in old_files if "best" in n]:
                 os.remove(path=self.path / old_file)
+
+        for old_file in [n for n in old_files if "latest" in n]:
+            os.remove(path=self.path / old_file)
