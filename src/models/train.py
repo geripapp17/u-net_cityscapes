@@ -1,4 +1,5 @@
 import io
+from typing import Dict
 
 import torch
 from torch import nn
@@ -16,9 +17,13 @@ def train_step(
     optimizer: torch.optim.Optimizer,
     scaler: torch.cuda.amp.GradScaler,
     device: torch.device,
-) -> float:
+) -> Dict[str, float]:
 
-    train_loss = 0
+    metrics = {
+        "loss": 0.0,
+        "accuracy": 0.0,
+    }
+
     with tqdm(total=len(dataloader), leave=False, desc="Train") as pbar:
         for xs, ys in dataloader:
             xs, ys = xs.to(device), ys.to(device)
@@ -27,7 +32,8 @@ def train_step(
                 preds = model(xs)
                 loss = loss_fn(preds, ys)
 
-            train_loss += loss.item()
+            metrics["loss"] += loss.item()
+            metrics["accuracy"] += pixel_accuracy(preds, ys)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -36,7 +42,10 @@ def train_step(
 
             pbar.update(1)
 
-    return train_loss / len(dataloader)
+    metrics["loss"] /= len(dataloader)
+    metrics["accuracy"] /= len(dataloader)
+
+    return metrics
 
 
 def test_step(
@@ -49,7 +58,11 @@ def test_step(
 
     model.eval()
     with torch.inference_mode():
-        test_loss = 0
+        metrics = {
+            "loss": 0.0,
+            "accuracy": 0.0,
+        }
+
         with tqdm(total=len(dataloader), leave=False, desc="Test") as pbar:
             for xs, ys in dataloader:
                 xs, ys = xs.to(device), ys.to(device)
@@ -58,11 +71,15 @@ def test_step(
                     preds = model(xs)
                     loss = loss_fn(preds, ys)
 
-                test_loss += loss.item()
+                metrics["loss"] += loss.item()
+                metrics["accuracy"] += pixel_accuracy(preds, ys)
 
                 pbar.update(1)
 
-    return test_loss / len(dataloader)
+        metrics["loss"] /= len(dataloader)
+        metrics["accuracy"] /= len(dataloader)
+
+    return metrics
 
 
 def train(
@@ -87,7 +104,7 @@ def train(
         for epoch in range(epochs):
             pbar.set_description(f"Epoch {epoch}")
 
-            train_loss = train_step(
+            train_metrics = train_step(
                 model=model,
                 dataloader=train_dataloader,
                 loss_fn=loss_fn,
@@ -96,7 +113,7 @@ def train(
                 device=device,
             )
 
-            test_loss = test_step(
+            test_metrics = test_step(
                 model=model,
                 dataloader=test_dataloader,
                 loss_fn=loss_fn,
@@ -108,7 +125,13 @@ def train(
                 # TODO: Add wandb writer
                 writer.add_scalars(
                     main_tag="Loss",
-                    tag_scalar_dict={"train": train_loss, "test": test_loss},
+                    tag_scalar_dict={"train": train_metrics["loss"], "test": test_metrics["loss"]},
+                    global_step=epoch,
+                )
+
+                writer.add_scalars(
+                    main_tag="Accuracy",
+                    tag_scalar_dict={"train": train_metrics["accuracy"], "test": test_metrics["accuracy"]},
                     global_step=epoch,
                 )
 
@@ -119,11 +142,11 @@ def train(
                 )
 
             else:
-                print(f"Epoch: {epoch}\t|\tTrain Loss: {train_loss}\t|\tTest Loss: {test_loss}")
+                print(f"Epoch: {epoch}\t|\tTrain Loss: {train_metrics['loss']}\t|\tTest Loss: {test_metrics['loss']}")
 
             if model_saver is not None:
                 model_saver(
-                    current_loss=test_loss,
+                    current_loss=test_metrics["loss"],
                     epoch=epoch,
                     model=model,
                     optim=optimizer,
@@ -135,6 +158,13 @@ def train(
 
     if writer:
         writer.close()
+
+
+def pixel_accuracy(preds: torch.Tensor, ys: torch.Tensor) -> float:
+    segm = torch.argmax(preds, dim=1)
+    correct = torch.sum(segm == ys)
+
+    return correct / torch.numel(ys)
 
 
 def get_image_for_tensorboard(model, x, y):
