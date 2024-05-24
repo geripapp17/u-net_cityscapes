@@ -1,9 +1,14 @@
 import os
+import io
 from pathlib import Path
 
 import torch
 from torch import nn
+from torchvision.transforms.functional import pil_to_tensor
 from torch.utils.tensorboard import SummaryWriter
+
+from PIL import Image
+import matplotlib.pyplot as plt
 
 
 def create_tensorboard_writer(
@@ -77,3 +82,30 @@ class ModelSaver:
 
         for old_file in [n for n in old_files if "latest" in n]:
             os.remove(path=self.path / old_file)
+
+
+def get_image_for_tensorboard(model, x, y):
+
+    model.eval()
+    with torch.inference_mode():
+        preds = model(x)
+
+    fig, axes = plt.subplots(1, 2, figsize=(20, 5))
+    pred = torch.argmax(preds[0, :, :, :], dim=0)
+    axes[0].imshow(pred.cpu().numpy())
+    axes[0].axis(False)
+
+    axes[1].imshow(y.numpy())
+    axes[1].axis(False)
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+
+    tensor = pil_to_tensor(Image.open(io.BytesIO(buf.getvalue())))
+
+    plt.close()
+
+    return tensor

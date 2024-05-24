@@ -1,13 +1,11 @@
-import io
 from typing import Dict
 
 import torch
 from torch import nn
 from tqdm.auto import tqdm
-from torchvision.transforms.functional import pil_to_tensor
 
-from PIL import Image
-import matplotlib.pyplot as plt
+from src.utils.loggers import get_image_for_tensorboard
+from src.utils.metrics import pixel_accuracy
 
 
 def train_step(
@@ -102,7 +100,7 @@ def train(
 
     with tqdm(total=epochs) as pbar:
         for epoch in range(epochs):
-            pbar.set_description(f"Epoch {epoch}")
+            pbar.set_description(f"Epoch {epoch + 1}")
 
             train_metrics = train_step(
                 model=model,
@@ -158,37 +156,3 @@ def train(
 
     if writer:
         writer.close()
-
-
-def pixel_accuracy(preds: torch.Tensor, ys: torch.Tensor) -> float:
-    segm = torch.argmax(preds, dim=1)
-    correct = torch.sum(segm == ys)
-
-    return correct / torch.numel(ys)
-
-
-def get_image_for_tensorboard(model, x, y):
-
-    model.eval()
-    with torch.inference_mode():
-        preds = model(x)
-
-    fig, axes = plt.subplots(1, 2, figsize=(20, 5))
-    pred = torch.argmax(preds[0, :, :, :], dim=0)
-    axes[0].imshow(pred.cpu().numpy())
-    axes[0].axis(False)
-
-    axes[1].imshow(y.numpy())
-    axes[1].axis(False)
-
-    plt.tight_layout()
-
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    buf.seek(0)
-
-    tensor = pil_to_tensor(Image.open(io.BytesIO(buf.getvalue())))
-
-    plt.close()
-
-    return tensor
