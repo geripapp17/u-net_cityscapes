@@ -13,6 +13,7 @@ def train_step(
     dataloader: torch.utils.data.DataLoader,
     loss_fn: nn.Module,
     optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
     scaler: torch.cuda.amp.GradScaler,
     device: torch.device,
 ) -> Dict[str, float]:
@@ -37,6 +38,8 @@ def train_step(
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
+
+            scheduler.step()
 
             pbar.update(1)
 
@@ -86,6 +89,7 @@ def train(
     test_dataloader: torch.utils.data.DataLoader,
     loss_fn: nn.Module,
     optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
     epochs: int,
     device: torch.device,
     writer=None,
@@ -107,6 +111,7 @@ def train(
                 dataloader=train_dataloader,
                 loss_fn=loss_fn,
                 optimizer=optimizer,
+                scheduler=scheduler,
                 scaler=scaler,
                 device=device,
             )
