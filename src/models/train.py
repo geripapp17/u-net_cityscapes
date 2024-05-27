@@ -153,6 +153,7 @@ def train(
                     epoch=epoch,
                     model=model,
                     optim=optimizer,
+                    scheduler=scheduler,
                     loss_fn=loss_fn,
                     scaler=scaler,
                 )

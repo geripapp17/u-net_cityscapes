@@ -107,3 +107,19 @@ class CITYSCAPES(Dataset):
             target[target == idx] = CITYSCAPES.CLASS_MAP[idx]
 
         return target
+
+    @staticmethod
+    def decode_tensor(t: torch.Tensor) -> np.ndarray:
+
+        if t.ndim >= 3:
+            segm_one_channel = torch.argmax(t, dim=0).cpu().numpy()
+        else:
+            segm_one_channel = t
+
+        height, width = segm_one_channel.shape
+        color_image = np.zeros((height, width, 3), dtype=np.uint8)
+
+        for class_idx, color in CITYSCAPES.COLOR_MAP.items():
+            color_image[segm_one_channel == class_idx] = color
+
+        return color_image

@@ -44,6 +44,7 @@ class ModelSaver:
         epoch: int,
         model: nn.Module,
         optim: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler,
         loss_fn: nn.Module,
         scaler: torch.cuda.amp.GradScaler,
     ) -> None:
@@ -58,8 +59,9 @@ class ModelSaver:
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optim.state_dict(),
-                "loss": loss_fn,
-                "scaler": scaler.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
+                "loss_state_dict": loss_fn,
+                "scaler_state_dict": scaler.state_dict(),
             },
             f=latest_path,
         )
@@ -71,8 +73,9 @@ class ModelSaver:
                     "epoch": epoch,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optim.state_dict(),
-                    "loss": loss_fn,
-                    "scaler": scaler.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "loss_state_dict": loss_fn,
+                    "scaler_state_dict": scaler.state_dict(),
                 },
                 f=best_path,
             )
